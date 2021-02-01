@@ -10,10 +10,12 @@ public class Gameplay : MonoBehaviour
     //Parameter variables
     [SerializeField] GameObject blackTile;
     [SerializeField] GameObject redTile;
+    [SerializeField] GameObject winnerMarker;
+    [SerializeField] GameObject lastMoveMarker;
+
     [SerializeField] GameObject leftTopCorner;
     [SerializeField] GameObject rightBottomCorner;
-    Vector3 leftTopPosition;
-    Vector3 rightBottomPosition;
+
     float distanceBetweenTiles = 0.5f;
     float halfOfDistanceBetweenTiles;
 
@@ -32,13 +34,17 @@ public class Gameplay : MonoBehaviour
         allTilesInGame = new List<GameObject>();
         halfOfDistanceBetweenTiles = (float)Math.Round(distanceBetweenTiles / 2, 2);
 
-        leftTopPosition = leftTopCorner.transform.position;
-        rightBottomPosition = rightBottomCorner.transform.position;
+        lastMoveMarker.SetActive(false);  //Set last move square unvisible
     }
 
     // Update is called once per frame
     private void Update()
     {
+        if (gameOver)
+        {
+            return;
+        }
+        
         UpdateCurrentTilesPosition();
         IfMouseIsClickedRenderNewTile();
         if (CheckIfAnyPlayerWon() == true)
@@ -54,6 +60,9 @@ public class Gameplay : MonoBehaviour
         if (Input.GetMouseButtonDown(0) && !cursorOutsideOfBoard && !TileWasPlacedInMousePosition())
         {
             SetCurrentTileOpacity(1f);
+            lastMoveMarker.transform.position = new Vector3(currentTile.transform.position.x, currentTile.transform.position.y, 5);
+            lastMoveMarker.SetActive(true);
+
             switch (currentPlayerMove)
             {
                 case Player.PLAYER_ONE:
@@ -182,7 +191,7 @@ public class Gameplay : MonoBehaviour
 
                 resultOfCheck = resultOfCheck || CheckFiveInRow(1, 0, leftPos, lastTileTag) || CheckFiveInRow(1, -1, leftTopPos, lastTileTag) || CheckFiveInRow(0, -1, topPos, lastTileTag) || CheckFiveInRow(-1, -1, rightTopPos, lastTileTag);
             }
-
+            gameOver = resultOfCheck;
             return resultOfCheck; 
         }
         return false;
@@ -202,10 +211,26 @@ public class Gameplay : MonoBehaviour
             }
             else
             {
-                if (i == 4) return true;
+                if (i == 4)     //Here some player wins
+                {
+                    Destroy(lastMoveMarker);
+                    Destroy(currentTile);  //If winner is, then delete unnesessary new tile
+                    MarkWinnigTiles(deltaX, deltaY, position);
+                    return true;
+                }
             }
         }
         return false;
+    }
+
+    private void MarkWinnigTiles(float deltaX, float deltaY, Vector3 position)
+    {
+        for (int i = 0; i <= 4; i++)
+        {
+            var currentDelta = distanceBetweenTiles * i;
+            var positionOfMarker = new Vector3(position.x + (currentDelta * deltaX), position.y + (currentDelta * deltaY), -6);
+            Instantiate(winnerMarker, positionOfMarker, transform.rotation);
+        }
     }
 
     private bool CheckIfTileIsOnGivenCoordinates(float posX, float posY, string tag)
